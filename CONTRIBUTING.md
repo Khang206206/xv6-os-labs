@@ -1,6 +1,6 @@
 # Hướng dẫn làm việc nhóm — Lab0
 
-Nhóm gồm **Khang, Phú, Phúc**. Xem [kế hoạch chi tiết](docs/Ke_hoach_Lab0.md) để biết checklist, giao diện đã chốt, cách tự kiểm tra và yêu cầu nộp bài.
+Nhóm gồm **Khang, Phú, Phúc**. Yêu cầu chấm bài theo [đề Lab0](docs/Lab0_System_Call.md). Xem [kế hoạch chi tiết](docs/Ke_hoach_Lab0.md) để biết checklist, giao diện đã chốt, cách tự kiểm tra và yêu cầu nộp bài.
 
 ## Source nền
 
@@ -10,7 +10,33 @@ Bài làm dùng nhánh syscall của xv6-labs-2023, commit:
 e3b3f8f9b0b1dc9c9e42622b90e2155ff7f7b40a
 ```
 
-Khang chuẩn bị main từ commit này, đặt tag `lab0-base` tại source gốc, rồi commit tài liệu nhóm riêng. Ba nhánh tính năng cùng xuất phát từ main ban đầu, trước khi tích hợp code trace. Kiểm tra nhánh thực tế trước khi bắt đầu; việc có file hướng dẫn này không có nghĩa repo đã được chuyển sang main hay đã được đưa lên GitHub.
+Tag `lab0-base` giữ nguyên tại commit gốc trên để xuất patch. **Điểm bắt đầu code là main đã có sửa tương thích và tài liệu nhóm**, không phải tag lab0-base. Khang tạo cả ba nhánh tính năng từ cùng main đã chuẩn bị xong, trước khi tích hợp code trace.
+
+Source nhóm đã có commit `69f71ac` sửa tương thích:
+
+- `user/usertests.c`: đổi chữ ký thành `rwsbrk(char *s)` để khớp bảng test.
+- `Makefile`: thêm `-march=rv64gc -mabi=lp64d` cho cả CFLAGS và ASFLAGS để file C và assembly dùng tập lệnh phù hợp.
+
+Phú và Phúc lấy sẵn các sửa này qua repo nhóm, không sửa lại hoặc bỏ chúng khi làm bài. Khi Phú thêm trace vào Makefile, giữ nguyên cấu hình tương thích.
+
+## Kiểm tra môi trường trước khi code
+
+Không bắt buộc mọi người có GCC/QEMU cùng phiên bản. Môi trường Khang đã kiểm chứng là WSL/Ubuntu, GCC 15.2.0 và QEMU 10.2.1; xv6 boot được và `usertests rwsbrk` báo ALL TESTS PASSED. Đây là kiểm tra source nền, chưa phải kiểm thử chức năng trace hay toàn bộ usertests.
+
+Sau khi clone và chọn nhánh được giao, mở terminal Ubuntu tại thư mục repo, chạy:
+
+```bash
+make clean
+make qemu
+```
+
+Trong shell xv6:
+
+```text
+usertests rwsbrk
+```
+
+Kỳ vọng test báo OK và ALL TESTS PASSED. Thoát QEMU bằng Ctrl+A, thả phím rồi X. Nếu có lỗi, gửi log cùng kết quả `riscv64-linux-gnu-gcc --version` và `qemu-system-riscv64 --version` cho Khang; không tự hạ/nâng phiên bản chỉ để giống máy Khang.
 
 ## Repo và nhánh
 

@@ -1,6 +1,6 @@
 # Kế hoạch Lab0 — Khang, Phú, Phúc làm độc lập và tích hợp cuối
 
-Cập nhật: 30/09/2026. Yêu cầu bài tập căn cứ vào `D:\Lab0_docs\Lab0_System_Call.md`. Phân công và giao diện dưới đây đã được Khang đồng ý.
+Cập nhật: 30/09/2026. Yêu cầu bài tập căn cứ vào [đề Lab0 trong repo](Lab0_System_Call.md). Phân công và giao diện dưới đây đã được Khang đồng ý.
 
 ## 1. Phạm vi và cách làm
 
@@ -22,7 +22,11 @@ Nhánh `syscall`, commit đã chốt:
 e3b3f8f9b0b1dc9c9e42622b90e2155ff7f7b40a
 ```
 
-Khang tạo `main` từ commit này và đặt tag `lab0-base` tại đúng commit source gốc; nếu tag đã có thì kiểm tra, không ghi đè. Có thể thêm tài liệu phối hợp bằng một commit riêng trên main trước khi tạo ba nhánh tính năng. Ba nhánh tính năng phải cùng xuất phát từ main ban đầu đó, trước khi ghép bất kỳ phần code trace nào. Không dùng nhánh util hoặc tự chuyển sang phiên bản xv6 khác.
+Tag `lab0-base` giữ nguyên ở commit gốc này để xuất patch, không di chuyển sang bản đã sửa. **Cả ba bắt đầu code từ main đã có sửa tương thích và tài liệu nhóm**, không checkout tag gốc để làm bài. Khang tạo ba nhánh tính năng từ cùng main đã chuẩn bị xong, trước khi ghép code trace.
+
+Commit `69f71ac` đã sửa tương thích source nền: `rwsbrk(char *s)` trong usertests khớp kiểu hàm của bảng test; Makefile chỉ định `-march=rv64gc -mabi=lp64d` cho cả CFLAGS và ASFLAGS. Các sửa này được giữ trong main và các nhánh của nhóm, đồng thời có trong patch cuối so với lab0-base. Phú/Phúc không cần tự sửa lại; Phú giữ nguyên hai cấu hình khi thêm UPROGS.
+
+Môi trường Khang đã kiểm chứng: WSL/Ubuntu, GCC 15.2.0, QEMU 10.2.1; boot thành công và test `rwsbrk` báo ALL TESTS PASSED. Không bắt buộc trùng phiên bản compiler/QEMU giữa các máy; mỗi người phải kiểm tra môi trường của mình. Kết quả này chưa xác nhận chức năng trace hoặc toàn bộ usertests.
 
 ### Giao diện giữa các phần
 
@@ -61,8 +65,9 @@ Phú/Phúc không sửa `kernel/syscall.c`. Khang có thể sửa các file khá
 - [ ] Đọc Chương 2 và mục 4.3–4.4 Chương 4 sách xv6 như đề yêu cầu.
 - [ ] Kiểm tra working tree trước khi chuyển nhánh; giữ lại công việc đang có, không xóa/ghi đè.
 - [ ] Khang chuẩn bị repo GitHub và các nhánh theo mục 8 từ source syscall đã chốt. Phú/Phúc clone repo nhóm sau khi được cấp quyền; không cần tự khởi tạo repo khác.
-- [ ] Chọn đúng nhánh: Phú `feat/trace-user`, Phúc `feat/trace-handler`, Khang `feat/trace-dispatcher`. Các nhánh đã được tạo từ cùng main ban đầu, nên mỗi người có thể bắt đầu vào thời điểm khác nhau.
-- [ ] Trước khi sửa, chạy `make clean`, `make qemu` trên source gốc và thử `ls`. Thoát bằng `Ctrl-a` rồi `x`.
+- [ ] Chọn đúng nhánh: Phú `feat/trace-user`, Phúc `feat/trace-handler`, Khang `feat/trace-dispatcher`. Các nhánh đã được tạo từ cùng main có sửa tương thích và tài liệu, nên mỗi người có thể bắt đầu vào thời điểm khác nhau.
+- [ ] Trước khi code, chạy `make clean`, `make qemu` trên source nhóm đã sửa tương thích, rồi chạy `usertests rwsbrk` trong xv6; cần thấy OK và ALL TESTS PASSED. Thoát bằng `Ctrl-a` rồi `x`. Xem [hướng dẫn môi trường](../CONTRIBUTING.md#kiểm-tra-môi-trường-trước-khi-code).
+- [ ] Nếu lỗi, gửi Khang log và phiên bản GCC/QEMU; không yêu cầu hai bạn dùng đúng phiên bản trên máy Khang hoặc sửa lại lỗi đã có commit chung.
 
 Sau khi repo và các nhánh ban đầu đã sẵn sàng, ai chuẩn bị xong có thể code ngay. GitHub là cách phối hợp nhóm đã chọn, không phải yêu cầu nộp bài của đề; kết quả cuối vẫn nộp Moodle.
 
@@ -227,9 +232,9 @@ StudentID1_StudentID2_StudentID3.zip
 - [ ] Tạo **một repo GitHub Private**, mời Phú và Phúc làm collaborator để push nhánh của mình. Tên repo và tài khoản GitHub điền khi tạo; kế hoạch chưa giả định URL.
 - [ ] Tạo repo GitHub rỗng, không sinh README/license/gitignore mới. Dùng lịch sử Git có sẵn của source xv6 để push, không upload từng file hoặc xóa `.git` rồi khởi tạo lại.
 - [ ] Trên bản source của Khang, giữ remote MIT với tên `upstream`, đặt `origin` là repo GitHub của nhóm; kiểm tra remote hiện tại trước khi đổi. Phú/Phúc clone repo nhóm thì origin tự trỏ tới GitHub nhóm.
-- [ ] Tạo `main` từ SHA syscall ở mục 2; đặt tag `lab0-base` tại SHA đó và push tag lên repo nhóm. Đặt main làm nhánh mặc định.
-- [ ] Giữ nguyên cấu trúc source và nội dung README. Nếu thêm kế hoạch vào `docs/Ke_hoach_Lab0.md`, dùng commit tài liệu riêng sau tag baseline và trước khi tạo các nhánh tính năng. Không cần thêm tài liệu khác chỉ để đủ quy trình.
-- [ ] Tạo và push cả ba nhánh tính năng từ cùng main ban đầu. Không cần đưa toàn bộ nhánh bài lab khác từ MIT lên repo nhóm.
+- [ ] Main đã được tạo từ SHA syscall ở mục 2; kiểm tra tag `lab0-base` vẫn tại SHA gốc và push tag lên repo nhóm. Không tạo lại/ghi đè main hoặc tag đã có. Đặt main làm nhánh mặc định.
+- [ ] Giữ nguyên cấu trúc source và nội dung README. Trước khi tạo các nhánh tính năng, main phải chứa commit sửa tương thích và các tài liệu đã cập nhật: CONTRIBUTING.md, kế hoạch và đề trong docs. Commit tài liệu riêng, không trộn với code sửa tương thích.
+- [ ] Tạo và push cả ba nhánh tính năng từ cùng main đã có sửa tương thích và tài liệu, sau khi source nền được kiểm chứng. Không cần đưa toàn bộ nhánh bài lab khác từ MIT lên repo nhóm.
 - [ ] Gửi URL repo và tên nhánh cho hai bạn; sau bước khởi tạo này, không cần chờ nhau để làm việc.
 
 Tài liệu nhóm được commit sau baseline sẽ xuất hiện trong diff/source archive cuối nếu xuất toàn bộ HEAD; điều này không phải đóng góp code. Khi rà đóng góp, xem riêng các file source được phân công.
