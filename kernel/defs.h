@@ -8,6 +8,8 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+struct sysinfo;
+struct sysinfo_proc;
 
 // bio.c
 void            binit(void);
@@ -33,6 +35,11 @@ void            fileinit(void);
 int             fileread(struct file*, uint64, int n);
 int             filestat(struct file*, uint64 addr);
 int             filewrite(struct file*, uint64, int n);
+uint64          sysinfo_file_version(void);
+uint64          sysinfo_files(struct sysinfo*);
+void            sysinfo_fds(struct proc*, struct sysinfo_proc*);
+void            filecopyfds(struct proc*, struct proc*);
+struct file*    filedetachfd(struct proc*, int);
 
 // fs.c
 void            fsinit(int);
@@ -106,6 +113,7 @@ void            yield(void);
 int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
+void            sysinfo_procs(struct sysinfo*);
 
 // swtch.S
 void            swtch(struct context*, struct context*);
@@ -140,6 +148,9 @@ void            argaddr(int, uint64 *);
 int             fetchstr(uint64, char*, int);
 int             fetchaddr(uint64, uint64*);
 void            syscall();
+
+// sysproc.c
+void            sysinfoinit(void);
 
 // trap.c
 extern uint     ticks;
