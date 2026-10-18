@@ -5,6 +5,72 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "sleeplock.h"
+#include "sysinfo.h"
+
+static struct sysinfo snapshot;
+static struct sleeplock snapshot_lock;
+
+void
+sysinfoinit(void)
+{
+  initsleeplock(&snapshot_lock, "sysinfo");
+}
+
+// Join by ftable slot, counting each process only once per file.
+static int
+sysinfo_pids(void)
+{
+  if(snapshot.nfile < 0 || snapshot.nfile > NFILE ||
+     snapshot.nproc < 0 || snapshot.nproc > NPROC)
+    return -1;
+  for(int i = 0; i < snapshot.nproc; i++){
+    char seen[NFILE] = {0};
+    struct sysinfo_proc *p = &snapshot.procs[i];
+    for(int fd = 0; fd < NOFILE; fd++){
+      int id = p->file_id[fd];
+      if(id == -1)
+        continue;
+      int j;
+      for(j = 0; j < snapshot.nfile; j++)
+        if(snapshot.files[j].id == id)
+          break;
+      if(id < 0 || id >= NFILE || j == snapshot.nfile)
+        return -1;
+      if(!seen[j]){
+        struct sysinfo_file *f = &snapshot.files[j];
+        if(f->npids >= NPROC)
+          return -1;
+        f->pids[f->npids++] = p->pid;
+        seen[j] = 1;
+      }
+    }
+  }
+  return 0;
+}
+
+uint64
+sys_sysinfo(void)
+{
+  uint64 addr;
+  int result = -1;
+
+  argaddr(0, &addr);
+  acquiresleep(&snapshot_lock);
+  for(int attempt = 0; attempt < 3; attempt++){
+    memset(&snapshot, 0, sizeof(snapshot));
+    uint64 version = sysinfo_file_version();
+    sysinfo_procs(&snapshot);
+    if(sysinfo_files(&snapshot) != version)
+      continue;
+    if(sysinfo_pids() == 0)
+      result = copyout(myproc()->pagetable, addr,
+                       (char *)&snapshot, sizeof(snapshot));
+    break;
+  }
+  releasesleep(&snapshot_lock);
+  return result;
+}
 
 uint64
 sys_trace(void){
