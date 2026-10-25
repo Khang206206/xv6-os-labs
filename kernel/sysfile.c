@@ -39,16 +39,7 @@ argfd(int n, int *pfd, struct file **pf)
 static int
 fdalloc(struct file *f)
 {
-  int fd;
-  struct proc *p = myproc();
-
-  for(fd = 0; fd < NOFILE; fd++){
-    if(p->ofile[fd] == 0){
-      p->ofile[fd] = f;
-      return fd;
-    }
-  }
-  return -1;
+  return fileallocfd(f);
 }
 
 uint64
@@ -59,9 +50,12 @@ sys_dup(void)
 
   if(argfd(0, 0, &f) < 0)
     return -1;
-  if((fd=fdalloc(f)) < 0)
-    return -1;
+  // Own the extra reference before publishing the new descriptor.
   filedup(f);
+  if((fd=fdalloc(f)) < 0){
+    fileclose(f);
+    return -1;
+  }
   return fd;
 }
 
@@ -102,7 +96,7 @@ sys_close(void)
 
   if(argfd(0, &fd, &f) < 0)
     return -1;
-  myproc()->ofile[fd] = 0;
+  f = filedetachfd(myproc(), fd);
   fileclose(f);
   return 0;
 }
@@ -350,15 +344,14 @@ sys_open(void)
   }
 
   if(ip->type == T_DEVICE){
-    f->type = FD_DEVICE;
     f->major = ip->major;
   } else {
-    f->type = FD_INODE;
     f->off = 0;
   }
   f->ip = ip;
-  f->readable = !(omode & O_WRONLY);
-  f->writable = (omode & O_WRONLY) || (omode & O_RDWR);
+  filesetmeta(f, ip->type == T_DEVICE ? FD_DEVICE : FD_INODE,
+              !(omode & O_WRONLY),
+              (omode & O_WRONLY) || (omode & O_RDWR));
 
   if((omode & O_TRUNC) && ip->type == T_FILE){
     itrunc(ip);
@@ -488,15 +481,15 @@ sys_pipe(void)
   fd0 = -1;
   if((fd0 = fdalloc(rf)) < 0 || (fd1 = fdalloc(wf)) < 0){
     if(fd0 >= 0)
-      p->ofile[fd0] = 0;
+      filedetachfd(p, fd0);
     fileclose(rf);
     fileclose(wf);
     return -1;
   }
   if(copyout(p->pagetable, fdarray, (char*)&fd0, sizeof(fd0)) < 0 ||
      copyout(p->pagetable, fdarray+sizeof(fd0), (char *)&fd1, sizeof(fd1)) < 0){
-    p->ofile[fd0] = 0;
-    p->ofile[fd1] = 0;
+    filedetachfd(p, fd0);
+    filedetachfd(p, fd1);
     fileclose(rf);
     fileclose(wf);
     return -1;
