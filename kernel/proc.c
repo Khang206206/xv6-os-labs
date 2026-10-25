@@ -5,6 +5,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "sysinfo.h"
 
 struct cpu cpus[NCPU];
 
@@ -124,6 +125,7 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
+  p->nsched = 0;
   p->trace_mask = 0;
 
   // Allocate a trapframe page.
@@ -164,6 +166,7 @@ freeproc(struct proc *p)
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
+  p->nsched = 0;
   p->parent = 0;
   p->name[0] = 0;
   p->chan = 0;
@@ -280,7 +283,7 @@ growproc(int n)
 int
 fork(void)
 {
-  int i, pid;
+  int pid;
   struct proc *np;
   struct proc *p = myproc();
 
@@ -304,9 +307,7 @@ fork(void)
   np->trapframe->a0 = 0;
 
   // increment reference counts on open file descriptors.
-  for(i = 0; i < NOFILE; i++)
-    if(p->ofile[i])
-      np->ofile[i] = filedup(p->ofile[i]);
+  filecopyfds(p ,np);
   np->cwd = idup(p->cwd);
 
   safestrcpy(np->name, p->name, sizeof(p->name));
@@ -354,11 +355,9 @@ exit(int status)
 
   // Close all open files.
   for(int fd = 0; fd < NOFILE; fd++){
-    if(p->ofile[fd]){
-      struct file *f = p->ofile[fd];
+    struct file *f = filedetachfd(p, fd);
+    if(f)
       fileclose(f);
-      p->ofile[fd] = 0;
-    }
   }
 
   begin_op();
@@ -461,6 +460,7 @@ scheduler(void)
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
+        p->nsched++;
         p->state = RUNNING;
         c->proc = p;
         swtch(&c->context, &p->context);
@@ -474,6 +474,37 @@ scheduler(void)
   }
 }
 
+void
+sysinfo_procs(struct sysinfo *info)
+{
+  struct proc *p;
+  info->nproc = 0;
+  for (p=proc; p < &proc[NPROC]; p++) {
+    struct sysinfo_proc *sp;
+
+    acquire(&wait_lock);
+    acquire(&p->lock);
+
+    if(p->state == UNUSED){
+      release(&p->lock);
+      release(&wait_lock);
+      continue;
+    }
+
+    sp = &info->procs[info->nproc++];
+    sp->pid = p->pid;
+    sp->ppid = p->parent ? p->parent->pid : 0;
+    sp->state = p->state;
+    sp->nsched = p->nsched;
+
+
+    release(&wait_lock);
+
+    sysinfo_fds(p, sp);
+
+    release(&p->lock);
+  }
+}
 // Switch to scheduler.  Must hold only p->lock
 // and have changed proc->state. Saves and restores
 // intena because intena is a property of this
