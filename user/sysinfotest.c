@@ -380,7 +380,9 @@ testbad(void)
   check(sysinfo((struct sysinfo *)(end - 16)) == -1, "partial copyout failure");
   check(sbrk(-grow) != (char *)-1, "release partial destination");
   take();
-  // This base links user text RWX; use the protected trampoline, not address 0.
+  // The user ELF maps the text page at zero without write permission.
+  check(sysinfo((struct sysinfo *)0) == -1, "read-only text destination rejected");
+  take();
   check(sysinfo((struct sysinfo *)TRAMPOLINE) == -1, "protected mapping rejected");
   take();
   int count = info.nfile, nfd = process(getpid())->nfd;
