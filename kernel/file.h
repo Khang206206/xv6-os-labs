@@ -38,3 +38,6 @@ struct devsw {
 extern struct devsw devsw[];
 
 #define CONSOLE 1
+
+int fileallocfd(struct file*);
+void filesetmeta(struct file*, int, int, int);
