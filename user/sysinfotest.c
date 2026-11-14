@@ -48,6 +48,8 @@ haspid(struct sysinfo_file *f, int pid)
 static void
 validate(void)
 {
+  check(info.freemem <= PHYSTOP - KERNBASE && info.freemem % PGSIZE == 0,
+        "free memory bounds/alignment");
   check(info.nfile >= 0 && info.nfile <= NFILE, "file count bounds");
   check(info.nproc > 0 && info.nproc <= NPROC, "process count bounds");
   check(process(getpid()) != 0, "caller missing");
@@ -151,6 +153,9 @@ dump(void)
 {
   printf("sysinfo: %d files, %d processes, %d bytes\n",
          info.nfile, info.nproc, (int)sizeof(info));
+  printf("freemem=");
+  print64(info.freemem);
+  printf(" bytes\n");
   for(int i = 0; i < info.nfile; i++){
     struct sysinfo_file *f = &info.files[i];
     printf("file id=%d type=%d mode=%d ref=%d npids=%d pids:",
@@ -169,6 +174,36 @@ dump(void)
         printf(" %d:%d", fd, p->file_id[fd]);
     printf("\n");
   }
+}
+
+static void
+testfreemem(void)
+{
+  const int bytes = 8 * PGSIZE;
+  check(sbrk(bytes) != (char *)-1, "warm up heap");
+  check(sbrk(-bytes) != (char *)-1, "release warmup heap");
+  take();
+  uint64 baseline = info.freemem;
+  for(int i = 0; i < 5; i++){
+    check(sbrk(bytes) != (char *)-1, "grow heap");
+    take();
+    check(info.freemem + bytes == baseline, "heap allocation consumes pages");
+    check(sbrk(-bytes) != (char *)-1, "shrink heap");
+    take();
+    check(info.freemem == baseline, "heap pages returned");
+  }
+  for(int i = 0; i < 5; i++){
+    int pid = fork(), status;
+    check(pid >= 0, "memory test fork");
+    if(pid == 0)
+      exit(0);
+    check(wait(&status) == pid && status == 0, "memory test wait");
+    take();
+    check(info.freemem == baseline, "fork pages returned");
+  }
+  printf("sysinfotest: freemem baseline=");
+  print64(baseline);
+  printf(" bytes; allocated=%d bytes; reclaimed OK\n", bytes);
 }
 
 static void
@@ -523,6 +558,7 @@ main(void)
   printf("sysinfotest: start\n");
   take();
   dump();
+  testfreemem();
   testfiles();
   testprocs();
   testbad();

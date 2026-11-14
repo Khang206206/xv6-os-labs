@@ -63,9 +63,11 @@ sys_sysinfo(void)
     sysinfo_procs(&snapshot);
     if(sysinfo_files(&snapshot) != version)
       continue;
-    if(sysinfo_pids() == 0)
+    if(sysinfo_pids() == 0){
+      snapshot.freemem = kfreemem();
       result = copyout(myproc()->pagetable, addr,
                        (char *)&snapshot, sizeof(snapshot));
+    }
     break;
   }
   releasesleep(&snapshot_lock);

@@ -42,6 +42,7 @@ struct sysinfo {
   int nproc;
   struct sysinfo_file files[NFILE];
   struct sysinfo_proc procs[NPROC];
+  uint64 freemem;
 };
 
 #endif
