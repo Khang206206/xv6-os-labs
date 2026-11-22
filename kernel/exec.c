@@ -20,7 +20,7 @@ int flags2perm(int flags)
 }
 
 int
-exec(char *path, char **argv)
+exec(char *path, char **argv, int printpt)
 {
   char *s, *last;
   int i, off;
@@ -128,6 +128,8 @@ exec(char *path, char **argv)
   p->trapframe->sp = sp; // initial stack pointer
   proc_freepagetable(oldpagetable, oldsz);
 
+  if(printpt)
+    vmprint(p->pagetable);
   return argc; // this ends up in a0, the first argument to main(argc, argv)
 
  bad:

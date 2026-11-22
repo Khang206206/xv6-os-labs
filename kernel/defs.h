@@ -25,7 +25,8 @@ void            consoleintr(int);
 void            consputc(int);
 
 // exec.c
-int             exec(char*, char**);
+int             exec(char*, char**, int);
+void            vmprint(pagetable_t);
 
 // file.c
 struct file*    filealloc(void);
@@ -68,6 +69,7 @@ void            ramdiskrw(struct buf*);
 
 // kalloc.c
 void*           kalloc(void);
+uint64          kfreemem(void);
 void            kfree(void *);
 void            kinit(void);
 

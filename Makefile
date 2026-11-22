@@ -192,9 +192,12 @@ UPROGS=\
 	$U/_zombie\
 	$U/_trace\
 	$U/_sysinfotest\
+	$U/_pgaccesstest\
 
 
 
+
+UPROGS += $U/_vmprint $U/_vmprinttest
 
 ifeq ($(LAB),$(filter $(LAB), lock))
 UPROGS += \

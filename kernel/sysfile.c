@@ -424,8 +424,8 @@ sys_chdir(void)
   return 0;
 }
 
-uint64
-sys_exec(void)
+static uint64
+doexec(int printpt)
 {
   char path[MAXPATH], *argv[MAXARG];
   int i;
@@ -454,7 +454,7 @@ sys_exec(void)
       goto bad;
   }
 
-  int ret = exec(path, argv);
+  int ret = exec(path, argv, printpt);
 
   for(i = 0; i < NELEM(argv) && argv[i] != 0; i++)
     kfree(argv[i]);
@@ -465,6 +465,18 @@ sys_exec(void)
   for(i = 0; i < NELEM(argv) && argv[i] != 0; i++)
     kfree(argv[i]);
   return -1;
+}
+
+uint64
+sys_exec(void)
+{
+  return doexec(0);
+}
+
+uint64
+sys_execpt(void)
+{
+  return doexec(1);
 }
 
 uint64
