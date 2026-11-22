@@ -196,6 +196,8 @@ UPROGS=\
 
 
 
+UPROGS += $U/_vmprint $U/_vmprinttest
+
 ifeq ($(LAB),$(filter $(LAB), lock))
 UPROGS += \
 	$U/_stats
