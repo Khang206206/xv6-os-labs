@@ -167,3 +167,64 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_pgaccess(void)
+{
+  uint64 base;
+  uint64 mask_addr;
+  int npages;
+
+  argaddr(0, &base);
+  argint(1, &npages);
+  argaddr(2, &mask_addr);
+
+  pagetable_t pagetable = myproc()->pagetable;
+  // Validate input
+  if(npages < 1 || npages > 32)
+    return -1;
+  if(base >= MAXVA)
+    return -1;
+
+  uint64 start = PGROUNDDOWN(base);
+  uint64 size = (uint64)npages * PGSIZE;
+
+  if(start > MAXVA - size)
+    return -1;
+
+  // Validate output buffer
+  if(mask_addr >= MAXVA || sizeof(uint) > MAXVA - mask_addr)
+    return -1;
+
+  uint64 mask_end = mask_addr + sizeof(uint);
+  for(uint64 va = PGROUNDDOWN(mask_addr); va < mask_end; va += PGSIZE){
+    pte_t *pte = walk(pagetable, va, 0);
+    if(pte == 0 || (*pte & PTE_V) == 0 ||
+       (*pte & PTE_U) == 0 || (*pte & PTE_W) == 0)
+      return -1;
+  }
+
+  // Validate all measured pages
+  pte_t *ptes[32];
+  for(int i = 0; i < npages; i++){
+    uint64 va = start + (uint64)i * PGSIZE;
+    pte_t *pte = walk(pagetable, va, 0);
+
+    if(pte == 0 || (*pte & PTE_V) == 0 || (*pte & PTE_U) == 0)
+      return -1;
+    ptes[i] = pte;
+  }
+
+  // Collect accessed bits and clear only PTE_A.
+  uint mask = 0;
+  for(int i = 0; i < npages; i++){
+    if(*ptes[i] & PTE_A)
+      mask |= (1U << i);
+    *ptes[i] &= ~PTE_A;
+  }
+
+  // Copy exactly four bytes to user memory.
+  if(copyout(pagetable, mask_addr, (char *)&mask, sizeof(uint)) < 0)
+    return -1;
+  return 0;
+}

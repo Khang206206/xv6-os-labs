@@ -104,6 +104,7 @@ extern uint64 sys_close(void);
 extern uint64 sys_trace(void); //Declare handler
 extern uint64 sys_sysinfo(void);
 extern uint64 sys_execpt(void);
+extern uint64 sys_pgaccess(void);
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
 static uint64 (*syscalls[])(void) = {
@@ -131,6 +132,7 @@ static uint64 (*syscalls[])(void) = {
 [SYS_trace] = sys_trace, // Sign handler
 [SYS_sysinfo] sys_sysinfo,
 [SYS_execpt] sys_execpt,
+[SYS_pgaccess] = sys_pgaccess,
 };
 
 //Add name array
@@ -159,6 +161,7 @@ static char *syscall_names[] = {
   [SYS_trace]   = "trace",
   [SYS_sysinfo] = "sysinfo",
   [SYS_execpt] = "execpt",
+  [SYS_pgaccess] = "pgaccess",
 };
 
 void
