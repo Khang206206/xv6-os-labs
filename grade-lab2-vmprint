@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+import re
+from gradelib import Runner, run_tests, save, shell_script, test
+
+r = Runner(save("xv6.vmprint.out"))
+hexptr = r"0x[0-9a-f]{16}"
+header = re.compile("page table " + hexptr)
+entry = re.compile(r"((?: \.\.){1,3})(\d+): pte (" + hexptr + ") pa (" + hexptr + ")")
+
+@test(1, "ordinary exec and rejected execpt do not print")
+def ordinary():
+    r.run_qemu(shell_script(["echo plain", "vmprinttest"]))
+    r.match("^plain$", "^vmprinttest: OK$", no=[".*page table .*", ".*panic:"])
+
+@test(1, "one valid tree before echo, argv preserved")
+def tree():
+    r.run_qemu(shell_script(["vmprint echo hello two", "echo ordinary"]))
+    lines = r.qemu.output.splitlines()
+    starts = [i for i, line in enumerate(lines) if header.fullmatch(line)]
+    assert len(starts) == 1, "expected one page table"
+    parents = []
+    last = {}
+    leaves = set()
+    end = lines.index("hello two")
+    assert end < lines.index("ordinary"), "incorrect output order"
+    for line in lines[starts[0]+1:end]:
+        match = entry.fullmatch(line)
+        assert match, "unexpected tree line: " + line
+        prefix, idx, raw, addr = match.groups()
+        depth, idx, raw, addr = prefix.count(".."), int(idx), int(raw,16), int(addr,16)
+        parents = parents[:depth-1]
+        assert len(parents) == depth-1 and 0 <= idx < 512, "invalid depth or slot"
+        key = tuple(parents)
+        assert idx > last.get(key, -1) and raw & 1 and addr == (raw >> 10) << 12, "invalid order, V bit or PA"
+        last[key] = idx
+        if raw & 14:
+            leaves.add(key + (idx,))
+        else:
+            assert depth < 3, "unexpected branch at L0"
+            parents.append(idx)
+    assert (0,0,0) in leaves and (255,511,510) in leaves and (255,511,511) in leaves, "missing expected leaf"
+
+@test(1, "execpt then ordinary exec in the same process")
+def once():
+    r.run_qemu(shell_script(["vmprint vmprinttest ordinary"]))
+    r.match("^normal-after-errors$")
+    assert sum(bool(header.fullmatch(line)) for line in r.qemu.output.splitlines()) == 1, "unexpected number of trees"
+
+@test(1, "trace records execpt under syscall 24")
+def trace_execpt():
+    r.run_qemu(shell_script(["trace 16777216 vmprint echo traced"]))
+    r.match(r"^syscall execpt -> 2$", "^traced$")
+
+run_tests()

@@ -273,6 +273,37 @@ uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
   return newsz;
 }
 
+// Print a valid entry and descend only through branches.
+static pagetable_t
+printentry(pte_t pte, int index, char *indent)
+{
+  if(!(pte & PTE_V))
+    return 0;
+  uint64 pa = PTE2PA(pte);
+  printf("%s%d: pte %p pa %p\n", indent, index, pte, pa);
+  if(pte & (PTE_R | PTE_W | PTE_X))
+    return 0;
+  return (pagetable_t)pa;
+}
+
+void
+vmprint(pagetable_t root)
+{
+  printf("page table %p\n", (uint64)root);
+  for(int i = 0; i < 512; i++){
+    pagetable_t l1 = printentry(root[i], i, " ..");
+    if(!l1)
+      continue;
+    for(int j = 0; j < 512; j++){
+      pagetable_t l0 = printentry(l1[j], j, " .. ..");
+      if(!l0)
+        continue;
+      for(int k = 0; k < 512; k++)
+        printentry(l0[k], k, " .. .. ..");
+    }
+  }
+}
+
 // Recursively free page-table pages.
 // All leaf mappings must already have been removed.
 void
